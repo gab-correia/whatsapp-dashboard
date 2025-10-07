@@ -184,3 +184,8 @@ CELERY_BEAT_SCHEDULE = {
         'schedule': crontab(minute=0),  # A cada hora
     },
 }
+
+# Evolution API Configuration
+EVOLUTION_API_URL = os.environ.get('EVOLUTION_API_URL', 'http://localhost:8080')
+EVOLUTION_API_KEY = os.environ.get('EVOLUTION_API_KEY', '')
+EVOLUTION_WEBHOOK_SECRET = os.environ.get('EVOLUTION_WEBHOOK_SECRET', None)

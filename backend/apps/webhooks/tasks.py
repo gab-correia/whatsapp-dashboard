@@ -7,11 +7,11 @@ logger = logging.getLogger(__name__)
 @shared_task(bind=True, max_retries=5)
 def process_webhook(self, webhook_log_id):
     """
-    Processa um webhook recebido
+    Processa um webhook recebido (ATUALIZADO)
     """
     try:
         from .models import WebhookLog
-        from apps.msgms.tasks import process_incoming_message
+        from .processors import WebhookProcessor
         
         webhook = WebhookLog.objects.get(id=webhook_log_id)
         webhook.status = 'processing'
@@ -19,28 +19,42 @@ def process_webhook(self, webhook_log_id):
         
         logger.info(f"Processing webhook: {webhook.webhook_id}")
         
-        # Processar baseado no tipo de evento
+        # Extrair dados
         event_type = webhook.event_type
-        payload = webhook.payload
+        payload_data = webhook.payload.get('data', webhook.payload)
         
-        if event_type == 'message.received':
-            # Enfileirar processamento da mensagem
-            process_incoming_message.delay(payload)
+        # Processar baseado no tipo de evento
+        processor_map = {
+            'MESSAGES_UPSERT': WebhookProcessor.process_messages_upsert,
+            'messages.upsert': WebhookProcessor.process_messages_upsert,
+            'MESSAGES_UPDATE': WebhookProcessor.process_messages_update,
+            'messages.update': WebhookProcessor.process_messages_update,
+            'CONNECTION_UPDATE': WebhookProcessor.process_connection_update,
+            'connection.update': WebhookProcessor.process_connection_update,
+            'QRCODE_UPDATED': WebhookProcessor.process_qrcode_updated,
+            'qrcode.updated': WebhookProcessor.process_qrcode_updated,
+        }
+        
+        processor = processor_map.get(event_type)
+        
+        if processor:
+            result = processor(payload_data, webhook_log_id)
             
-        elif event_type == 'message.status':
-            # Atualizar status da mensagem
-            from apps.msgms.models import Message
-            Message.objects.filter(
-                whatsapp_id=payload.get('whatsapp_id')
-            ).update(status=payload.get('status'))
-        
-        # Marcar como sucesso
-        webhook.status = 'success'
-        webhook.processed_at = timezone.now()
-        webhook.save()
-        
-        logger.info(f"Webhook processed successfully: {webhook_log_id}")
-        return {'status': 'success', 'webhook_id': webhook_log_id}
+            webhook.status = 'success'
+            webhook.processed_at = timezone.now()
+            webhook.metadata = result
+            webhook.save()
+            
+            logger.info(f"Webhook processed successfully: {webhook_log_id}")
+            return result
+        else:
+            logger.warning(f"No processor for event type: {event_type}")
+            webhook.status = 'success'
+            webhook.processed_at = timezone.now()
+            webhook.error_message = f"Event type '{event_type}' not implemented"
+            webhook.save()
+            
+            return {'status': 'skipped', 'message': 'Event type not implemented'}
         
     except Exception as exc:
         from .models import WebhookLog
@@ -51,7 +65,7 @@ def process_webhook(self, webhook_log_id):
         webhook.retry_count += 1
         webhook.save()
         
-        logger.error(f"Error processing webhook: {exc}")
+        logger.error(f"Error processing webhook: {exc}", exc_info=True)
         
         # Retry com backoff exponencial
         raise self.retry(exc=exc, countdown=2 ** webhook.retry_count * 60)

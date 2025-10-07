@@ -23,7 +23,8 @@ urlpatterns = [
     path('api/health/', health_check, name='health_check'),
     path('api/dashboard/stats/', dashboard_stats, name='dashboard_stats'),
     
-        # Apps URLs
+    # Apps URLs
     path('api/messages/', include('apps.msgms.urls')),
     path('api/contacts/', include('apps.contacts.urls')),
+    path('api/webhooks/', include('apps.webhooks.urls')),
 ]
