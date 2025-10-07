@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 
 from pathlib import Path
 from .env_config import *
+from celery.schedules import crontab
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -147,4 +148,39 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',  # Por enquanto, sem autenticação
     ],
+}
+
+# ========================================
+# Celery Configuration
+# ========================================
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = os.environ.get('REDIS_URL', 'redis://localhost:6379/0')
+
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'America/Sao_Paulo'
+
+# Configurações de retry
+CELERY_TASK_ACKS_LATE = True
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+
+# Configurações de concorrência
+CELERY_WORKER_PREFETCH_MULTIPLIER = 1
+CELERY_WORKER_MAX_TASKS_PER_CHILD = 1000
+
+# Configurações de logs
+CELERY_WORKER_LOG_FORMAT = '[%(asctime)s: %(levelname)s/%(processName)s] %(message)s'
+
+
+
+CELERY_BEAT_SCHEDULE = {
+    'cleanup-old-messages-daily': {
+        'task': 'apps.msgms.tasks.cleanup_old_messages',
+        'schedule': crontab(hour=2, minute=0),  # Todo dia às 2h da manhã
+    },
+    'update-contact-stats-hourly': {
+        'task': 'apps.contacts.tasks.update_all_contact_stats',
+        'schedule': crontab(minute=0),  # A cada hora
+    },
 }

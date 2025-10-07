@@ -30,3 +30,12 @@ restart:
 clean:
 	docker-compose down -v
 	docker system prune -f
+
+celery-worker:
+	docker-compose exec backend celery -A config worker -l info
+
+celery-beat:
+	docker-compose exec backend celery -A config beat -l info
+
+celery-flower:
+	docker-compose exec backend celery -A config flower
