@@ -39,7 +39,7 @@ services:
 
   # Evolution API
   evolution-api:
-    image: atendai/evolution-api:latest
+    image: atendai/evolution-api:v2.1.1
     container_name: evolution-api
     ports:
       - "8080:8080"
@@ -63,6 +63,9 @@ services:
       - CACHE_LOCAL_ENABLED=false
       - WEBHOOK_GLOBAL_URL=http://backend:8000/api/webhooks/evolution/
       - WEBHOOK_GLOBAL_ENABLED=false
+
+      # Configuração da sessão (IMPORTANTE PARA QR CODE)
+      - CONFIG_SESSION_PHONE_VERSION=2.3000.1028111649
     volumes:
       - evolution_instances:/evolution/instances
       - evolution_store:/evolution/store
