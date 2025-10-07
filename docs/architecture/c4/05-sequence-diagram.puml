@@ -1,0 +1,143 @@
+@startuml 05-sequence-diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Sequence.puml
+
+SHOW_INDEX()
+
+title Sequence Diagram - Fluxo de Webhook da Evolution API
+
+' =====================================================================
+' Participantes (Atores e Sistemas)
+' =====================================================================
+System_Ext(whatsapp, "WhatsApp Business", "Plataforma de mensagens")
+System_Ext(evolution_api, "Evolution API", "API de integração")
+Container(nginx, "Nginx", "Reverse Proxy", "Servidor web")
+Container(django_api, "Backend API", "Django REST Framework", "API REST")
+Container(celery_worker, "Celery Worker", "Python/Celery", "Processador assíncrono")
+ContainerDb(redis, "Redis", "Redis 7.2", "Cache e queue")
+ContainerDb(postgres, "PostgreSQL", "PostgreSQL 15", "Database")
+Container(frontend, "Frontend", "React SPA", "Interface web")
+Person(user, "Usuário Final", "Usuário do sistema")
+
+' =====================================================================
+' Fluxo 1: Recebimento de Webhook (Push)
+' =====================================================================
+autonumber 1
+
+note over whatsapp, evolution_api
+  **Cenário 1: Nova mensagem recebida no WhatsApp**
+  Cliente envia mensagem → WhatsApp → Evolution API
+end note
+
+Rel(whatsapp, evolution_api, "Nova mensagem recebida", "WhatsApp Protocol")
+Rel(evolution_api, nginx, "POST /webhooks/evolution", "HTTPS/JSON")
+Rel(nginx, django_api, "Roteia para endpoint", "HTTP")
+
+django_api -> django_api: Valida payload\ne autenticidade
+
+alt Webhook válido
+    Rel(django_api, redis, "Enfileira task de processamento", "Redis Protocol")
+    Rel(django_api, nginx, "200 OK - Webhook aceito", "HTTP")
+    Rel(nginx, evolution_api, "200 OK", "HTTPS")
+    
+    note over django_api
+      **Processamento assíncrono**
+      Webhook aceito rapidamente,
+      processamento via Celery
+    end note
+    
+    Rel(celery_worker, redis, "Consome task da fila", "Redis Protocol")
+    Rel(celery_worker, postgres, "INSERT message, contact", "SQL")
+    Rel(postgres, celery_worker, "Confirma inserção", "SQL Result")
+    Rel(celery_worker, redis, "Atualiza cache de métricas", "Redis SET")
+    
+else Webhook inválido
+    Rel(django_api, nginx, "400 Bad Request - Payload inválido", "HTTP")
+    Rel(nginx, evolution_api, "400 Bad Request", "HTTPS")
+end
+
+' =====================================================================
+' Fluxo 2: Consulta de Dados pelo Usuário (Pull)
+' =====================================================================
+autonumber 20
+
+note over user, frontend
+  **Cenário 2: Usuário acessa dashboard**
+  Consulta lista de mensagens recentes
+end note
+
+Rel(user, frontend, "Acessa /dashboard/messages", "Browser")
+Rel(frontend, nginx, "GET /api/messages?limit=50", "HTTPS/JSON")
+Rel(nginx, django_api, "Roteia para API", "HTTP")
+
+django_api -> django_api: Valida token JWT
+
+alt Dados em cache
+    Rel(django_api, redis, "GET messages:recent:50", "Redis GET")
+    Rel(redis, django_api, "Retorna dados cached", "JSON")
+    
+else Cache miss
+    Rel(django_api, postgres, "SELECT * FROM messages\nLIMIT 50", "SQL Query")
+    Rel(postgres, django_api, "ResultSet com mensagens", "SQL Result")
+    Rel(django_api, redis, "SET messages:recent:50", "Redis SET + EXPIRE 300s")
+end
+
+Rel(django_api, nginx, "200 OK - Lista de mensagens", "JSON/HTTP")
+Rel(nginx, frontend, "200 OK", "JSON/HTTPS")
+Rel(frontend, user, "Renderiza lista de mensagens", "UI Update")
+
+' =====================================================================
+' Fluxo 3: Sincronização Manual (Consulta Evolution API)
+' =====================================================================
+autonumber 40
+
+note over user, evolution_api
+  **Cenário 3: Sincronização manual**
+  Admin força sincronização de contatos
+end note
+
+Rel(user, frontend, "Clica em 'Sincronizar Contatos'", "Browser")
+Rel(frontend, nginx, "POST /api/sync/contacts", "HTTPS/JSON")
+Rel(nginx, django_api, "Roteia para API", "HTTP")
+
+django_api -> django_api: Valida permissões de admin
+
+Rel(django_api, redis, "Enfileira job de sincronização", "Redis LPUSH")
+Rel(django_api, nginx, "202 Accepted - Job enfileirado", "JSON")
+Rel(nginx, frontend, "202 Accepted", "JSON/HTTPS")
+Rel(frontend, user, "Exibe 'Sincronização iniciada'", "Toast Notification")
+
+Rel(celery_worker, redis, "Consome job de sincronização", "Redis RPOP")
+Rel(celery_worker, evolution_api, "GET /contacts", "HTTPS/REST")
+Rel(evolution_api, celery_worker, "Lista de contatos (JSON)", "JSON")
+
+loop Para cada contato
+    Rel(celery_worker, postgres, "INSERT OR UPDATE contact", "SQL UPSERT")
+end
+
+Rel(celery_worker, redis, "Atualiza status: completed", "Redis SET")
+
+note over celery_worker, postgres
+  **Task completada**
+  Frontend pode polling /api/sync/status
+  para verificar conclusão
+end note
+
+' =====================================================================
+' Notas de Arquitetura
+' =====================================================================
+note over django_api, redis
+  **Estratégia de Cache:**
+  • TTL de 5 minutos para queries
+  • Invalidação automática em updates
+  • Cache de agregações de métricas
+end note
+
+note over celery_worker
+  **Tasks Celery:**
+  • process_webhook(webhook_id)
+  • sync_contacts()
+  • generate_daily_report()
+  • cleanup_old_messages()
+end note
+
+@enduml

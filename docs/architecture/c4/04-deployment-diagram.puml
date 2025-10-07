@@ -1,0 +1,122 @@
+@startuml 04-deployment-diagram
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Deployment.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Deployment Diagram - WhatsApp Dashboard (Docker Compose)
+
+' =====================================================================
+' Nó Principal - Infraestrutura
+' =====================================================================
+Deployment_Node(vps_host, "VPS Cloud Server", "Ubuntu 22.04 LTS", "Servidor virtual hospedado (Hostinger/AWS/DigitalOcean)") {
+    
+    Deployment_Node(docker_engine, "Docker Engine", "Docker 24.x + Docker Compose", "Runtime de containers e orquestração") {
+        
+        ' --- Camada de Proxy/Load Balancer ---
+        Deployment_Node(nginx_container, "nginx-proxy", "Docker Container", "Container do proxy reverso") {
+            Container(nginx, "Nginx", "Nginx 1.25", "Serve arquivos estáticos, termina SSL e roteia requisições")
+        }
+        
+        ' --- Camada de Aplicação Frontend ---
+        Deployment_Node(frontend_container, "frontend-app", "Docker Container", "Container da aplicação React") {
+            Container(react_app, "React SPA", "Node.js 20 + Vite", "Single Page Application buildada e servida")
+        }
+        
+        ' --- Camada de Aplicação Backend ---
+        Deployment_Node(backend_container, "backend-api", "Docker Container", "Container da API Django") {
+            Container(django_api, "Django REST API", "Python 3.11 + Django 4.2 + Gunicorn", "API REST com workers Gunicorn")
+        }
+        
+        ' --- Workers Assíncronos ---
+        Deployment_Node(worker_container, "celery-worker", "Docker Container", "Container de processamento assíncrono") {
+            Container(celery_worker, "Celery Worker", "Python 3.11 + Celery 5.3", "Processa tarefas em background via Redis queue")
+        }
+        
+        ' --- Camada de Dados - Database ---
+        Deployment_Node(postgres_container, "postgres-db", "Docker Container + Volume", "Container do banco de dados com volume persistente") {
+            ContainerDb(postgres_db, "PostgreSQL", "PostgreSQL 15.4", "Armazena dados persistentes com volume Docker")
+        }
+        
+        ' --- Camada de Cache/Queue ---
+        Deployment_Node(redis_container, "redis-cache", "Docker Container", "Container de cache e message broker") {
+            ContainerDb(redis, "Redis", "Redis 7.2", "Cache de sessões + fila de tarefas Celery")
+        }
+    }
+}
+
+' =====================================================================
+' Sistemas/Serviços Externos
+' =====================================================================
+Deployment_Node(internet, "Internet", "Public Network") {
+    System_Ext(evolution_api, "Evolution API", "API externa de integração WhatsApp")
+    Person(end_user, "Usuário Final", "Acessa via navegador web")
+}
+
+' =====================================================================
+' Relacionamentos - Usuário para Sistema
+' =====================================================================
+Rel(end_user, nginx, "Acessa aplicação", "HTTPS:443")
+
+' =====================================================================
+' Relacionamentos - Proxy para Aplicações
+' =====================================================================
+Rel(nginx, react_app, "Serve arquivos estáticos", "HTTP:3000")
+Rel(nginx, django_api, "Proxy reverso para /api/*", "HTTP:8000")
+
+' =====================================================================
+' Relacionamentos - Frontend para Backend
+' =====================================================================
+Rel(react_app, django_api, "Requisições API REST", "HTTP/JSON")
+
+' =====================================================================
+' Relacionamentos - Backend para Datastores
+' =====================================================================
+Rel(django_api, postgres_db, "Lê/escreve dados", "TCP:5432/PostgreSQL Wire Protocol")
+Rel(django_api, redis, "Cache de sessões + enfileira tasks", "TCP:6379/Redis Protocol")
+
+' =====================================================================
+' Relacionamentos - Worker para Datastores
+' =====================================================================
+Rel(celery_worker, redis, "Consome tasks da fila", "TCP:6379/Redis Protocol")
+Rel(celery_worker, postgres_db, "Persiste resultados processados", "TCP:5432/PostgreSQL Wire Protocol")
+
+' =====================================================================
+' Relacionamentos - Backend para APIs Externas
+' =====================================================================
+Rel(evolution_api, django_api, "Envia webhooks de mensagens", "HTTPS/JSON")
+Rel(django_api, evolution_api, "Consulta dados via API", "HTTPS/REST")
+
+' =====================================================================
+' Notas de Infraestrutura
+' =====================================================================
+note right of docker_engine
+  **Docker Network:**
+  • bridge network "app-network"
+  • Comunicação interna entre containers
+  
+  **Volumes Persistentes:**
+  • postgres_data: /var/lib/postgresql/data
+  • static_files: /app/static
+  • media_files: /app/media
+  
+  **Variáveis de Ambiente:**
+  • .env compartilhado via docker-compose
+end note
+
+note bottom of nginx
+  **Configuração Nginx:**
+  • Termina SSL/TLS (Let's Encrypt)
+  • Compressão gzip
+  • Rate limiting
+  • Headers de segurança
+  • Logs centralizados
+end note
+
+note top of postgres_db
+  **Backup Strategy:**
+  • pg_dump automatizado
+  • Retenção 30 dias
+  • Volumes Docker persistentes
+end note
+
+@enduml

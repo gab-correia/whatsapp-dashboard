@@ -1,0 +1,107 @@
+@startuml 00-overview
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+' Remover legenda padrão para este diagrama de índice
+' LAYOUT_WITH_LEGEND()
+
+title Índice de Documentação C4 - WhatsApp Dashboard\nProjeto Django + React + Evolution API
+
+' =====================================================================
+' 📋 Metadados do Projeto
+' =====================================================================
+note as metadata
+**Metadados do Projeto**
+---
+**Versão:** 1.0
+**Data:** 07/10/2025
+**Equipe:** Projeto2 TechWeb
+**Stack:** Django REST + React + PostgreSQL + Celery
+end note
+
+' =====================================================================
+' 📘 Estrutura da Documentação C4
+' =====================================================================
+note as structure
+**Estrutura da Documentação**
+====
+**Level 1 - Context Diagram**
+• 01-context-diagram.puml
+  Visão geral do sistema e suas interações externas
+  
+**Level 2 - Container Diagram**
+• 02-container-diagram.puml
+  Componentes tecnológicos e suas responsabilidades
+  
+**Level 3 - Component Diagrams**
+• 03-component-backend-diagram.puml
+  Estrutura interna do Backend Django
+• 03-component-frontend-diagram.puml
+  Estrutura interna do Frontend React
+  
+**Deployment Diagram**
+• 04-deployment-diagram.puml
+  Infraestrutura Docker e deploy
+  
+**Sequence Diagram**
+• 05-sequence-diagram.puml
+  Fluxo de integração com Evolution API
+end note
+
+' =====================================================================
+' 🛠️ Stack Tecnológico
+' =====================================================================
+note as tech_stack
+**Stack Tecnológico**
+====
+**Frontend**
+• React.js + Vite
+• Tailwind CSS
+• Axios/Fetch API
+
+**Backend**
+• Django REST Framework
+• Python 3.x
+• Celery (Workers Assíncronos)
+
+**Infraestrutura**
+• PostgreSQL (Database)
+• Redis (Cache + Queue)
+• Nginx (Reverse Proxy)
+• Docker + Docker Compose
+
+**Integrações Externas**
+• Evolution API (WhatsApp)
+end note
+
+' =====================================================================
+' 📝 Descrição do Sistema
+' =====================================================================
+note as description
+**Sobre o Sistema**
+====
+Sistema de monitoramento e análise de 
+mensagens WhatsApp integrado com Evolution API.
+
+**Funcionalidades Principais:**
+• Recepção de webhooks da Evolution API
+• Armazenamento de mensagens e contatos
+• Processamento assíncrono com Celery
+• Dashboard interativo com métricas
+• Visualização de conversas em tempo real
+
+**Arquitetura:**
+• Frontend SPA em React
+• Backend REST API em Django
+• Workers para tarefas em background
+• Banco de dados relacional PostgreSQL
+• Cache distribuído com Redis
+end note
+
+' =====================================================================
+' 📐 Layout Visual (Posicionamento)
+' =====================================================================
+metadata -[hidden]down-> structure
+structure -[hidden]down-> tech_stack
+tech_stack -[hidden]down-> description
+
+@enduml

@@ -1,0 +1,101 @@
+@startuml 03-component-backend
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component Diagram - Backend API (Django)
+
+' =====================================================================
+' Elementos Externos ao Container
+' =====================================================================
+Container(frontend, "Frontend Web", "React.js", "Interface do usuário")
+System_Ext(evolution_api, "Evolution API", "API externa WhatsApp")
+ContainerDb(database, "Database", "PostgreSQL", "Armazena dados persistentes")
+ContainerDb(redis, "Cache & Queue", "Redis", "Cache e fila de tarefas")
+
+' =====================================================================
+' Container em Foco com seus Componentes
+' =====================================================================
+Container_Boundary(backend_api, "Backend API - Django REST Framework") {
+    
+    ' --- Camada de Entrada ---
+    Component(webhook_handler, "Webhook Handler", "Django Views", "Recebe e valida webhooks da Evolution API")
+    Component(rest_api, "REST API Endpoints", "Django REST Framework ViewSets", "Expõe endpoints REST para o frontend (CRUD de mensagens, contatos, métricas)")
+    Component(middleware, "Middleware Layer", "Django Middleware", "Autenticação JWT, CORS, logging e tratamento de erros")
+    
+    ' --- Camada de Negócio ---
+    Component(auth_service, "Auth Service", "Django Auth + JWT", "Gerencia autenticação, autorização e tokens de acesso")
+    Component(message_service, "Message Service", "Python Service Classes", "Processa mensagens, extrai metadados e aplica regras de negócio")
+    Component(webhook_processor, "Webhook Processor", "Python Service", "Valida, transforma e enfileira webhooks recebidos")
+    Component(api_client, "Evolution API Client", "Python HTTP Client", "Cliente HTTP para consultar dados da Evolution API")
+    
+    ' --- Camada de Dados ---
+    Component(serializers, "Serializers", "DRF Serializers", "Valida e serializa dados entre JSON e Python")
+    Component(models, "Models (ORM)", "Django ORM Models", "Define estrutura de dados: Message, Contact, User, Metrics")
+    Component(repositories, "Repository Layer", "Python Classes", "Abstração de acesso a dados e queries complexas")
+    
+    ' --- Tarefas Assíncronas ---
+    Component(celery_tasks, "Celery Tasks", "Celery Tasks", "Define tarefas: análise de sentimento, geração de relatórios, sincronização")
+}
+
+' =====================================================================
+' Relacionamentos - Frontend para Backend
+' =====================================================================
+Rel(frontend, middleware, "Requisições API", "HTTPS/JSON")
+Rel(middleware, rest_api, "Valida e roteia")
+Rel(middleware, auth_service, "Valida token JWT")
+
+' =====================================================================
+' Relacionamentos - Camada de API
+' =====================================================================
+Rel(rest_api, serializers, "Valida entrada/saída")
+Rel(rest_api, message_service, "Chama lógica de negócio")
+Rel(rest_api, auth_service, "Verifica permissões")
+
+Rel(webhook_handler, webhook_processor, "Processa webhook recebido")
+Rel(webhook_processor, celery_tasks, "Enfileira processamento assíncrono")
+
+' =====================================================================
+' Relacionamentos - Camada de Negócio
+' =====================================================================
+Rel(message_service, repositories, "Consulta/persiste dados")
+Rel(message_service, api_client, "Consulta Evolution API")
+Rel(webhook_processor, repositories, "Persiste dados do webhook")
+
+Rel(api_client, evolution_api, "Requisições HTTP", "HTTPS/REST")
+Rel(evolution_api, webhook_handler, "Envia webhooks", "HTTPS/JSON")
+
+' =====================================================================
+' Relacionamentos - Camada de Dados
+' =====================================================================
+Rel(serializers, models, "Valida contra schema")
+Rel(repositories, models, "Usa ORM")
+Rel(models, database, "Queries SQL", "TCP:5432")
+
+' =====================================================================
+' Relacionamentos - Tarefas Assíncronas
+' =====================================================================
+Rel(celery_tasks, repositories, "Processa dados em background")
+Rel(celery_tasks, redis, "Consome da fila", "Redis Protocol")
+Rel(message_service, redis, "Cache de consultas", "Redis Protocol")
+
+' =====================================================================
+' Notas Explicativas
+' =====================================================================
+note right of celery_tasks
+  **Tarefas Processadas:**
+  • Análise de sentimento
+  • Geração de relatórios
+  • Sincronização de contatos
+  • Limpeza de dados antigos
+end note
+
+note bottom of models
+  **Principais Models:**
+  • Message: mensagens WhatsApp
+  • Contact: contatos/clientes
+  • User: usuários do sistema
+  • Metric: métricas agregadas
+end note
+
+@enduml
