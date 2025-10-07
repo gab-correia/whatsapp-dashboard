@@ -39,8 +39,14 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     
+    # Third party
     'rest_framework',
     'corsheaders',
+    
+    # Local apps 
+    'apps.msgms.apps.MessagesConfig',
+    'apps.contacts.apps.ContactsConfig',
+    'apps.webhooks.apps.WebhooksConfig',
 ]
 
 MIDDLEWARE = [
