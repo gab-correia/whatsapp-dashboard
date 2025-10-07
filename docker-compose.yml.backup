@@ -37,44 +37,6 @@ services:
       timeout: 5s
       retries: 5
 
-  # Evolution API
-  evolution-api:
-    image: atendai/evolution-api:latest
-    container_name: evolution-api
-    ports:
-      - "8080:8080"
-    environment:
-      - AUTHENTICATION_API_KEY=${EVOLUTION_API_KEY}
-      - DATABASE_ENABLED=true
-      - DATABASE_PROVIDER=postgresql
-      - DATABASE_CONNECTION_URI=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/evolution_db
-      - DATABASE_SAVE_DATA_INSTANCE=true
-      - DATABASE_SAVE_DATA_NEW_MESSAGE=true
-      - DATABASE_SAVE_MESSAGE_UPDATE=true
-      - DATABASE_SAVE_DATA_CONTACTS=true
-      - DATABASE_SAVE_DATA_CHATS=true
-      - SERVER_URL=http://localhost:8080
-      - CORS_ORIGIN=*
-      - LOG_LEVEL=ERROR,WARN,INFO
-      - CACHE_REDIS_ENABLED=true
-      - CACHE_REDIS_URI=redis://redis:6379/1
-      - CACHE_REDIS_PREFIX_KEY=evolution
-      - CACHE_REDIS_SAVE_INSTANCES=true
-      - CACHE_LOCAL_ENABLED=false
-      - WEBHOOK_GLOBAL_URL=http://backend:8000/api/webhooks/evolution/
-      - WEBHOOK_GLOBAL_ENABLED=false
-    volumes:
-      - evolution_instances:/evolution/instances
-      - evolution_store:/evolution/store
-    networks:
-      - app-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    restart: unless-stopped
-
   # Backend Django
   backend:
     build:
@@ -157,8 +119,6 @@ services:
 volumes:
   postgres_data:
   redis_data:
-  evolution_instances:
-  evolution_store:
 
 networks:
   app-network:

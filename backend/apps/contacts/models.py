@@ -37,9 +37,9 @@ class Contact(models.Model):
     
     def update_stats(self):
         """Atualiza estatísticas do contato"""
-        from apps.msgms.models import Message
-        self.total_msgms = self.msgms.count()
-        last_message = self.msgms.first()
+        # CORREÇÃO: usar 'messages' ao invés de 'msgms'
+        self.total_messages = self.messages.count()
+        last_message = self.messages.first()
         if last_message:
             self.last_message_at = last_message.timestamp
         self.save()

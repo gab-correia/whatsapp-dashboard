@@ -186,6 +186,6 @@ CELERY_BEAT_SCHEDULE = {
 }
 
 # Evolution API Configuration
-EVOLUTION_API_URL = os.environ.get('EVOLUTION_API_URL', 'http://localhost:8080')
-EVOLUTION_API_KEY = os.environ.get('EVOLUTION_API_KEY', '')
+EVOLUTION_API_URL = os.environ.get('EVOLUTION_API_URL', 'http://evolution-api:8080')
+EVOLUTION_API_KEY = os.environ.get('EVOLUTION_API_KEY', 'minha-chave-super-secreta-123')
 EVOLUTION_WEBHOOK_SECRET = os.environ.get('EVOLUTION_WEBHOOK_SECRET', None)
