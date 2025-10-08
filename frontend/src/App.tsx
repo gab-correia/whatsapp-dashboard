@@ -3,6 +3,7 @@ import { Layout } from './components/layout';
 import { Dashboard } from './pages/Dashboard';
 import { Messages } from './pages/Messages';
 import { Contacts } from './pages/Contacts';
+import { Connection } from './pages/Connection';
 
 function App() {
   return (
@@ -10,6 +11,7 @@ function App() {
       <Layout>
         <Routes>
           <Route path="/" element={<Dashboard />} />
+          <Route path="/connection" element={<Connection />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/contacts" element={<Contacts />} />
         </Routes>

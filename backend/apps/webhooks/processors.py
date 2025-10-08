@@ -1,202 +1,193 @@
-# apps/webhooks/processors.py
 import logging
-from typing import Dict, Any
-from django.utils import timezone
 from apps.msgms.models import Message
 from apps.contacts.models import Contact
-from apps.webhooks.models import WebhookLog
-from apps.msgms.tasks import process_incoming_message, analyze_message_sentiment
+from django.utils import timezone
 
 logger = logging.getLogger(__name__)
 
 class WebhookProcessor:
-    """Processa diferentes tipos de eventos da Evolution API"""
-    
     @staticmethod
-    def process_messages_upsert(data: Dict[str, Any], webhook_log_id: int = None) -> Dict[str, Any]:
-        """
-        Processa evento MESSAGES_UPSERT (nova mensagem recebida)
-        
-        Formato do payload da Evolution API:
-        {
-            "event": "messages.upsert",
-            "instance": "instance_name",
-            "data": {
-                "key": {
-                    "remoteJid": "5511999999999@s.whatsapp.net",
-                    "fromMe": false,
-                    "id": "3EB0xxxxx"
-                },
-                "pushName": "João Silva",
-                "message": {
-                    "conversation": "Olá, tudo bem?"
-                },
-                "messageType": "conversation",
-                "messageTimestamp": 1234567890
-            }
-        }
-        """
-        logger.info(f"Processing MESSAGES_UPSERT: {data.get('key', {}).get('id')}")
-        
+    def process_messages_upsert(data, webhook_log_id=None):
+        """Processa webhook de nova mensagem (messages.upsert)"""
         try:
-            # Extrair dados do payload
+            logger.info(f"Processing messages.upsert webhook")
+            
+            # Extrair dados da mensagem
             key = data.get('key', {})
             message_data = data.get('message', {})
             
-            # Extrair número do WhatsApp (remover sufixo @s.whatsapp.net)
+            # Informações do contato
             remote_jid = key.get('remoteJid', '')
             phone_number = remote_jid.split('@')[0] if '@' in remote_jid else remote_jid
+            contact_name = data.get('pushName', 'Unknown')
+            
+            # Criar ou atualizar contato
+            contact, created = Contact.objects.get_or_create(
+                phone_number=phone_number,
+                defaults={
+                    'name': contact_name,
+                    'whatsapp_id': remote_jid,
+                }
+            )
+            
+            if not created and contact_name and contact_name != 'Unknown':
+                contact.name = contact_name
+                contact.save()
             
             # Extrair conteúdo da mensagem
-            content = WebhookProcessor._extract_message_content(message_data)
+            content = (
+                message_data.get('conversation') or
+                message_data.get('extendedTextMessage', {}).get('text') or
+                message_data.get('imageMessage', {}).get('caption') or
+                ''
+            )
             
-            # Dados formatados para a task
-            formatted_data = {
-                'whatsapp_id': key.get('id'),
-                'contact': {
-                    'whatsapp_id': phone_number,
-                    'name': data.get('pushName', phone_number),
-                    'phone_number': phone_number,
-                },
-                'message_type': data.get('messageType', 'text'),
-                'content': content,
-                'is_from_me': key.get('fromMe', False),
-                'timestamp': timezone.now(),
-                'metadata': {
-                    'instance': data.get('instance'),
-                    'raw_message_type': data.get('messageType'),
+            # Tipo de mensagem
+            message_type = data.get('messageType', 'conversation')
+            
+            # ID da mensagem
+            message_id = key.get('id', '')
+            
+            # Verificar se mensagem já existe (usando whatsapp_id)
+            existing = Message.objects.filter(
+                whatsapp_id=message_id
+            ).first()
+            
+            if existing:
+                logger.info(f"Message {message_id} already exists, skipping")
+                return {
+                    'status': 'skipped',
+                    'reason': 'Message already exists',
+                    'message_id': existing.id
                 }
-            }
             
-            # Enfileirar processamento assíncrono
-            from apps.msgms.tasks import process_incoming_message
-            task = process_incoming_message.delay(formatted_data)
+            # Criar mensagem
+            message = Message.objects.create(
+                contact=contact,
+                whatsapp_id=message_id,
+                content=content,
+                message_type=message_type,
+                is_from_me=key.get('fromMe', False),
+                timestamp=timezone.now(),
+                status='received'
+            )
             
-            logger.info(f"Message processing task enqueued: {task.id}")
+            # Atualizar contato
+            contact.total_messages += 1
+            contact.last_message_at = timezone.now()
+            contact.save()
+            
+            logger.info(f"✅ Message created: {message.id} from {contact.name}")
             
             return {
                 'status': 'success',
-                'task_id': task.id,
-                'message': 'Message queued for processing'
+                'message_id': message.id,
+                'contact_id': contact.id,
+                'contact_name': contact.name
             }
             
         except Exception as e:
-            logger.error(f"Error processing MESSAGES_UPSERT: {e}", exc_info=True)
-            return {
-                'status': 'error',
-                'message': str(e)
-            }
-    
+            logger.error(f"❌ Error processing messages.upsert: {e}", exc_info=True)
+            raise
+
     @staticmethod
-    def _extract_message_content(message_data: Dict) -> str:
-        """Extrai o conteúdo da mensagem baseado no tipo"""
-        # Mensagem de texto simples
-        if 'conversation' in message_data:
-            return message_data['conversation']
-        
-        # Mensagem com texto estendido
-        if 'extendedTextMessage' in message_data:
-            return message_data['extendedTextMessage'].get('text', '')
-        
-        # Mensagem de imagem com legenda
-        if 'imageMessage' in message_data:
-            return message_data['imageMessage'].get('caption', '[Imagem]')
-        
-        # Mensagem de vídeo com legenda
-        if 'videoMessage' in message_data:
-            return message_data['videoMessage'].get('caption', '[Vídeo]')
-        
-        # Mensagem de áudio
-        if 'audioMessage' in message_data:
-            return '[Áudio]'
-        
-        # Mensagem de documento
-        if 'documentMessage' in message_data:
-            filename = message_data['documentMessage'].get('fileName', 'documento')
-            return f'[Documento: {filename}]'
-        
-        # Localização
-        if 'locationMessage' in message_data:
-            return '[Localização]'
-        
-        # Contato
-        if 'contactMessage' in message_data:
-            return '[Contato]'
-        
-        return '[Mensagem não suportada]'
-    
-    @staticmethod
-    def process_messages_update(data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Processa evento MESSAGES_UPDATE (atualização de status da mensagem)
-        """
-        logger.info(f"Processing MESSAGES_UPDATE")
-        
+    def process_messages_update(data, webhook_log_id=None):
+        """Processa webhook de atualização de mensagem (messages.update)"""
         try:
+            logger.info(f"Processing messages.update webhook")
+            
             key = data.get('key', {})
+            message_id = key.get('id', '')
+            
+            # Buscar mensagem existente
+            message = Message.objects.filter(
+                whatsapp_id=message_id
+            ).first()
+            
+            if not message:
+                logger.warning(f"Message {message_id} not found for update")
+                return {
+                    'status': 'skipped',
+                    'reason': 'Message not found'
+                }
+            
+            # Atualizar status se disponível
             update = data.get('update', {})
+            status = update.get('status')
             
-            whatsapp_id = key.get('id')
-            status_map = {
-                0: 'sent',
-                1: 'delivered',
-                2: 'read',
-            }
-            
-            status_code = update.get('status', 0)
-            new_status = status_map.get(status_code, 'sent')
-            
-            # Atualizar status no banco
-            updated = Message.objects.filter(
-                whatsapp_id=whatsapp_id
-            ).update(status=new_status)
-            
-            logger.info(f"Updated {updated} messages with status {new_status}")
+            if status:
+                message.status = status
+                message.save()
+                logger.info(f"✅ Message {message.id} status updated to {status}")
             
             return {
                 'status': 'success',
-                'updated_count': updated,
-                'new_status': new_status
+                'message_id': message.id,
+                'new_status': status
             }
             
         except Exception as e:
-            logger.error(f"Error processing MESSAGES_UPDATE: {e}", exc_info=True)
+            logger.error(f"❌ Error processing messages.update: {e}", exc_info=True)
+            raise
+
+    @staticmethod
+    def process_connection_update(data, webhook_log_id=None):
+        """Processa webhook de atualização de conexão (connection.update)"""
+        try:
+            logger.info(f"Processing connection.update webhook")
+            logger.info(f"Connection state: {data.get('state', 'unknown')}")
+            
             return {
-                'status': 'error',
-                'message': str(e)
+                'status': 'success',
+                'connection_state': data.get('state', 'unknown')
             }
-    
+            
+        except Exception as e:
+            logger.error(f"❌ Error processing connection.update: {e}", exc_info=True)
+            raise
+
     @staticmethod
-    def process_connection_update(data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Processa evento CONNECTION_UPDATE (mudança de conexão da instância)
-        """
-        logger.info(f"Processing CONNECTION_UPDATE: {data.get('state')}")
-        
-        # Aqui você pode implementar lógica para:
-        # - Notificar sobre desconexões
-        # - Atualizar status da instância
-        # - Enviar alertas
-        
-        return {
-            'status': 'success',
-            'connection_state': data.get('state'),
-            'message': 'Connection update processed'
-        }
-    
+    def process_qrcode_updated(data, webhook_log_id=None):
+        """Processa webhook de atualização de QR Code"""
+        try:
+            logger.info(f"Processing qrcode.updated webhook")
+            
+            return {
+                'status': 'success',
+                'event': 'qrcode.updated'
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error processing qrcode.updated: {e}", exc_info=True)
+            raise
+
     @staticmethod
-    def process_qrcode_updated(data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Processa evento QRCODE_UPDATED (QR Code atualizado)
-        """
-        logger.info(f"Processing QRCODE_UPDATED")
-        
-        # Você pode:
-        # - Salvar o QR Code em um modelo
-        # - Enviar notificação para admin
-        # - Exibir na interface
-        
-        return {
-            'status': 'success',
-            'message': 'QR Code update processed'
-        }
+    def process_chats_update(data, webhook_log_id=None):
+        """Processa webhook de atualização de chats"""
+        try:
+            logger.info(f"Processing chats.update webhook")
+            
+            return {
+                'status': 'success',
+                'event': 'chats.update'
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error processing chats.update: {e}", exc_info=True)
+            raise
+
+    @staticmethod
+    def process_chats_upsert(data, webhook_log_id=None):
+        """Processa webhook de novo chat"""
+        try:
+            logger.info(f"Processing chats.upsert webhook")
+            
+            return {
+                'status': 'success',
+                'event': 'chats.upsert'
+            }
+            
+        except Exception as e:
+            logger.error(f"❌ Error processing chats.upsert: {e}", exc_info=True)
+            raise
+

@@ -1,10 +1,20 @@
 import { useDashboard } from '../../hooks/useDashboard';
+import { useMessages } from '../../hooks/useMessages';
+import { useContacts } from '../../hooks/useContacts';
 import { StatCard } from '../../components/ui/StatCard';
 
 export function Dashboard() {
-  const { stats, loading, error, refetch } = useDashboard();
+  const { stats, loading: statsLoading, error: statsError, refetch } = useDashboard();
+  const { messages } = useMessages();
+  const { contacts } = useContacts();
 
-  if (loading) {
+  // Calcular estatísticas reais
+  const totalMessages = messages.length;
+  const totalContacts = contacts.length;
+  const activeConversations = contacts.filter(c => c.last_message_at).length;
+  const pendingMessages = messages.filter(m => m.status === 'pending' || m.status === 'sent').length;
+
+  if (statsLoading) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-xl text-gray-600">Carregando...</div>
@@ -12,67 +22,125 @@ export function Dashboard() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="bg-red-100 text-red-700 p-4 rounded-lg">{error}</div>
-    );
-  }
-
   return (
     <div>
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Dashboard
-        </h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">
+            Dashboard
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Visão geral do sistema WhatsApp Dashboard
+          </p>
+        </div>
         <button
           onClick={refetch}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
         >
-          🔄 Atualizar
+          <span>🔄</span>
+          <span>Atualizar</span>
         </button>
       </div>
 
+      {/* Estatísticas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <StatCard
           title="Total de Mensagens"
-          value={stats?.total_messages || 0}
+          value={totalMessages}
+          icon={<span className="text-3xl">💬</span>}
           color="blue"
         />
         <StatCard
           title="Total de Contatos"
-          value={stats?.total_contacts || 0}
+          value={totalContacts}
+          icon={<span className="text-3xl">👥</span>}
           color="green"
         />
         <StatCard
           title="Conversas Ativas"
-          value={stats?.active_conversations || 0}
+          value={activeConversations}
+          icon={<span className="text-3xl">🔥</span>}
           color="purple"
         />
         <StatCard
-          title="Mensagens Pendentes"
-          value={stats?.pending_messages || 0}
+          title="Mensagens Hoje"
+          value={messages.filter(m => {
+            const today = new Date().toDateString();
+            return new Date(m.timestamp).toDateString() === today;
+          }).length}
+          icon={<span className="text-3xl">📅</span>}
           color="orange"
         />
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6">
+      {/* Status do Sistema */}
+      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
         <h2 className="text-xl font-semibold mb-4">Status do Sistema</h2>
-        <div className="space-y-3">
-          <div className="flex items-center gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-gray-700">Backend e Webhooks operacionais</span>
+            <div>
+              <div className="font-semibold text-gray-800">Backend</div>
+              <div className="text-sm text-gray-600">API operacional</div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-gray-700">Evolution API conectada</span>
+            <div>
+              <div className="font-semibold text-gray-800">Evolution API</div>
+              <div className="text-sm text-gray-600">Conectada</div>
+            </div>
           </div>
-          <div className="flex items-center gap-2">
+          
+          <div className="flex items-center gap-3 p-4 bg-green-50 rounded-lg">
             <div className="w-3 h-3 bg-green-500 rounded-full animate-pulse"></div>
-            <span className="text-gray-700">WhatsApp conectado</span>
+            <div>
+              <div className="font-semibold text-gray-800">Webhooks</div>
+              <div className="text-sm text-gray-600">Recebendo mensagens</div>
+            </div>
           </div>
         </div>
+      </div>
+
+      {/* Últimas Mensagens */}
+      <div className="bg-white rounded-lg shadow-md p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-xl font-semibold">Últimas Mensagens</h2>
+          <a href="/messages" className="text-blue-600 hover:underline text-sm">
+            Ver todas →
+          </a>
+        </div>
+        {messages.length === 0 ? (
+          <p className="text-gray-500 text-center py-8">Nenhuma mensagem ainda.</p>
+        ) : (
+          <div className="space-y-3">
+            {messages.slice(0, 5).map((message) => (
+              <div key={message.id} className="flex items-start gap-4 p-3 hover:bg-gray-50 rounded-lg transition-colors">
+                <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold flex-shrink-0">
+                  {message.contact_name?.charAt(0).toUpperCase() || '?'}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <div className="font-semibold text-gray-800">
+                      {message.contact_name || 'Desconhecido'}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {new Date(message.timestamp).toLocaleTimeString('pt-BR', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                  <div className="text-sm text-gray-600 truncate">
+                    {message.content || '(mídia)'}
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
-

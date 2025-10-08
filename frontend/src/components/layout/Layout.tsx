@@ -12,7 +12,7 @@ export function Layout({ children }: LayoutProps) {
   };
 
   const navLinkClass = (path: string) => {
-    const base = "px-4 py-2 rounded-lg transition-colors";
+    const base = "px-4 py-2 rounded-lg transition-colors font-medium";
     return isActive(path)
       ? `${base} bg-blue-600 text-white`
       : `${base} text-gray-700 hover:bg-gray-200`;
@@ -29,7 +29,10 @@ export function Layout({ children }: LayoutProps) {
                 📱 WhatsApp Dashboard
               </h1>
               
-              <div className="flex space-x-4">
+              <div className="flex space-x-2">
+                <Link to="/connection" className={navLinkClass('/connection')}>
+                  🔌 Conexão
+                </Link>
                 <Link to="/" className={navLinkClass('/')}>
                   📊 Dashboard
                 </Link>
@@ -59,3 +62,4 @@ export function Layout({ children }: LayoutProps) {
     </div>
   );
 }
+
