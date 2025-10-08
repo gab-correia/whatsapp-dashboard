@@ -12,7 +12,6 @@ export function useContacts() {
       setLoading(true);
       const data = await contactsApi.getAll();
       
-      // A API retorna array direto, não objeto com results
       if (Array.isArray(data)) {
         setContacts(data);
       } else {

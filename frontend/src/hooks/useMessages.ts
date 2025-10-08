@@ -12,7 +12,6 @@ export function useMessages() {
       setLoading(true);
       const data = await messagesApi.getAll();
       
-      // A API retorna array direto, não objeto com results
       if (Array.isArray(data)) {
         setMessages(data);
       } else {

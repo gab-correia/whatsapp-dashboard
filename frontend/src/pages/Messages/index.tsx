@@ -1,5 +1,6 @@
 import { useMessages } from '../../hooks/useMessages';
 import { useState } from 'react';
+import styles from './Messages.module.css';
 
 export function Messages() {
   const { messages, loading, error, refetch } = useMessages();
@@ -17,16 +18,16 @@ export function Messages() {
   });
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-xl text-gray-600">Carregando mensagens...</div>
-      </div>
-    );
-  }
+      return (
+        <div className={styles.loading}>
+          <div className={styles.loadingText}>Carregando mensagens...</div>
+        </div>
+      );
+    }
 
   if (error) {
     return (
-      <div className="bg-red-100 text-red-700 p-4 rounded-lg">
+      <div className={styles.error}>
         {error}
       </div>
     );
@@ -35,18 +36,16 @@ export function Messages() {
   return (
     <div>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-800">
-            Mensagens Recebidas
-          </h1>
-          <p className="text-gray-600 mt-1">
+      <div className={styles.header}>
+        <div className={styles.headerContent}>
+          <h1 className={styles.title}>Mensagens Recebidas</h1>
+          <p className={styles.subtitle}>
             Total: {filteredMessages.length} de {messages.length} mensagens
           </p>
         </div>
         <button
           onClick={refetch}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
+          className={styles.refreshButton}
         >
           <span>🔄</span>
           <span>Atualizar</span>
@@ -54,24 +53,20 @@ export function Messages() {
       </div>
 
       {/* Filtros */}
-      <div className="bg-white rounded-lg shadow-md p-4 mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          {/* Busca */}
-          <div className="flex-1">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="🔍 Buscar mensagens ou contatos..."
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+      <div className={styles.filtersCard}>
+        <div className={styles.filtersRow}>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="🔍 Buscar mensagens ou contatos..."
+            className={styles.searchInput}
+          />
 
-          {/* Filtro por tipo */}
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className={styles.filterSelect}
           >
             <option value="all">Todos os tipos</option>
             <option value="conversation">Conversa</option>
@@ -85,12 +80,12 @@ export function Messages() {
 
       {/* Lista de Mensagens */}
       {filteredMessages.length === 0 ? (
-        <div className="bg-white rounded-lg shadow-md p-8 text-center">
-          <div className="text-6xl mb-4">💬</div>
-          <h3 className="text-xl font-semibold text-gray-700 mb-2">
+        <div className={styles.emptyState}>
+          <div className={styles.emptyIcon}>💬</div>
+          <h3 className={styles.emptyTitle}>
             {searchTerm ? 'Nenhuma mensagem encontrada' : 'Nenhuma mensagem ainda'}
           </h3>
-          <p className="text-gray-500">
+          <p className={styles.emptyDescription}>
             {searchTerm 
               ? 'Tente buscar por outros termos'
               : 'Aguarde mensagens chegarem no WhatsApp conectado'
@@ -98,68 +93,60 @@ export function Messages() {
           </p>
         </div>
       ) : (
-        <div className="bg-white rounded-lg shadow-md overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className={styles.tableCard}>
+          <table className={styles.table}>
+            <thead className={styles.tableHead}>
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Contato
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mensagem
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Tipo
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Data/Hora
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
+                <th className={styles.tableHeadCell}>Contato</th>
+                <th className={styles.tableHeadCell}>Mensagem</th>
+                <th className={styles.tableHeadCell}>Tipo</th>
+                <th className={styles.tableHeadCell}>Data/Hora</th>
+                <th className={styles.tableHeadCell}>Status</th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className={styles.tableBody}>
               {filteredMessages.map((message) => (
-                <tr key={message.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                <tr key={message.id} className={styles.tableRow}>
+                  <td className={styles.tableCell}>
+                    <div className={styles.contactCell}>
+                      <div className={styles.avatar}>
                         {message.contact_name?.charAt(0).toUpperCase() || '?'}
                       </div>
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
+                      <div className={styles.contactInfo}>
+                        <div className={styles.contactName}>
                           {message.contact_name || 'Desconhecido'}
                         </div>
-                        <div className="text-sm text-gray-500">
+                        <div className={styles.contactPhone}>
                           {message.contact_phone}
                         </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900 max-w-md">
+                  <td className={styles.tableCell}>
+                    <div className={styles.messageContent}>
                       {message.content || '(mídia sem legenda)'}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
+                  <td className={styles.tableCell}>
+                    <span className={`${styles.badge} ${styles.badgeBlue}`}>
                       {message.message_type}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    <div>
-                      {new Date(message.timestamp).toLocaleDateString('pt-BR')}
-                    </div>
-                    <div className="text-xs text-gray-400">
-                      {new Date(message.timestamp).toLocaleTimeString('pt-BR')}
+                  <td className={styles.tableCell}>
+                    <div className={styles.dateTimeCell}>
+                      <div className={styles.date}>
+                        {new Date(message.timestamp).toLocaleDateString('pt-BR')}
+                      </div>
+                      <div className={styles.time}>
+                        {new Date(message.timestamp).toLocaleTimeString('pt-BR')}
+                      </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                      message.status === 'read' ? 'bg-green-100 text-green-800' :
-                      message.status === 'delivered' ? 'bg-yellow-100 text-yellow-800' :
-                      'bg-gray-100 text-gray-800'
+                  <td className={styles.tableCell}>
+                    <span className={`${styles.badge} ${
+                      message.status === 'read' ? styles.badgeGreen :
+                      message.status === 'delivered' ? styles.badgeYellow :
+                      styles.badgeGray
                     }`}>
                       {message.status || 'received'}
                     </span>

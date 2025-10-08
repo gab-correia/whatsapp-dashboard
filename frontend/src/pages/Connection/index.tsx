@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import styles from './Connection.module.css';
 
 interface InstanceInfo {
   id: string;
@@ -253,56 +254,58 @@ export function Connection() {
 
   return (
     <div>
-      <h1 className="text-3xl font-bold text-gray-800 mb-8">
-        📱 Conexão WhatsApp
-      </h1>
+      <div className={styles.header}>
+        <h1 className={styles.title}>Conexão WhatsApp</h1>
+      </div>
 
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <div className={`${styles.alert} ${styles.alertError}`}>
           {error}
         </div>
       )}
 
       {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+        <div className={`${styles.alert} ${styles.alertSuccess}`}>
           {success}
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-semibold">Instâncias Existentes</h2>
+      {/* Instâncias Existentes */}
+      <div className={styles.card}>
+        <div className={styles.cardHeader}>
+          <h2 className={styles.cardTitle}>Instâncias Existentes</h2>
           <button
             onClick={fetchInstances}
-            className="px-3 py-1 bg-gray-600 text-white text-sm rounded hover:bg-gray-700"
+            className={`${styles.button} ${styles.buttonSecondary}`}
           >
             🔄 Atualizar
           </button>
         </div>
         
         {instances.length === 0 ? (
-          <p className="text-gray-500">Nenhuma instância criada ainda.</p>
+          <div className={styles.emptyState}>
+            Nenhuma instância criada ainda.
+          </div>
         ) : (
-          <div className="space-y-3">
+          <div className={styles.instancesList}>
             {instances.map((instance) => (
-              <div key={instance.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                <div className="flex items-center space-x-4">
-                  <div className={`w-3 h-3 rounded-full ${
-                    instance.connectionStatus === 'open' ? 'bg-green-500 animate-pulse' : 
-                    'bg-red-500'
+              <div key={instance.id} className={styles.instanceItem}>
+                <div className={styles.instanceInfo}>
+                  <div className={`${styles.statusDot} ${
+                    instance.connectionStatus === 'open' ? styles.statusOnline : styles.statusOffline
                   }`}></div>
-                  <div>
-                    <div className="font-semibold">{instance.name}</div>
-                    <div className="text-sm text-gray-500">
+                  <div className={styles.instanceDetails}>
+                    <div className={styles.instanceName}>{instance.name}</div>
+                    <div className={styles.instanceMeta}>
                       Status: {instance.connectionStatus} | {instance.integration}
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-2 flex-wrap">
+                <div className={styles.instanceActions}>
                   {instance.connectionStatus === 'close' && (
                     <button
                       onClick={() => fetchQRCode(instance.name)}
-                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700"
+                      className={`${styles.button} ${styles.buttonPrimary}`}
                       disabled={loading}
                     >
                       📷 Conectar
@@ -312,7 +315,7 @@ export function Connection() {
                   {instance.connectionStatus === 'open' && (
                     <button
                       onClick={() => logoutInstance(instance.name)}
-                      className="px-3 py-1 bg-orange-600 text-white text-sm rounded hover:bg-orange-700"
+                      className={`${styles.button} ${styles.buttonWarning}`}
                     >
                       🔌 Desconectar
                     </button>
@@ -320,25 +323,21 @@ export function Connection() {
                   
                   <button
                     onClick={() => checkConnection(instance.name)}
-                    className="px-3 py-1 bg-green-600 text-white text-sm rounded hover:bg-green-700"
+                    className={`${styles.button} ${styles.buttonSuccess}`}
                   >
                     ✓ Status
                   </button>
                   
-                  <button
+                  {/* <button
                     onClick={() => configureWebhook(instance.name, true)}
-                    className="px-3 py-1 bg-purple-600 text-white text-sm rounded hover:bg-purple-700"
+                    className={`${styles.button} ${styles.buttonPurple}`}
                   >
                     🔗 Webhook
-                  </button>
+                  </button> */}
                   
                   <button
                     onClick={() => deleteInstance(instance.name)}
-                    className={`px-3 py-1 text-white text-sm rounded ${
-                      instance.connectionStatus === 'open'
-                        ? 'bg-gray-400 cursor-not-allowed'
-                        : 'bg-red-600 hover:bg-red-700'
-                    }`}
+                    className={`${styles.button} ${styles.buttonDanger}`}
                     disabled={instance.connectionStatus === 'open'}
                     title={instance.connectionStatus === 'open' ? 'Desconecte antes de deletar' : 'Deletar instância'}
                   >
@@ -351,80 +350,82 @@ export function Connection() {
         )}
       </div>
 
-      <div className="bg-white rounded-lg shadow-md p-6 mb-6">
-        <h2 className="text-xl font-semibold mb-4">Criar Nova Instância</h2>
+      {/* Criar Nova Instância */}
+      <div className={styles.card}>
+        <h2 className={styles.cardTitle}>Criar Nova Instância</h2>
         
-        <div className="flex gap-4">
+        <div className={styles.inputGroup}>
           <input
             type="text"
             value={instanceName}
             onChange={(e) => setInstanceName(e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, ''))}
             placeholder="nome_da_instancia"
-            className="flex-1 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500"
+            className={styles.input}
             disabled={loading}
             onKeyPress={(e) => e.key === 'Enter' && createInstance()}
           />
           <button
             onClick={createInstance}
             disabled={loading || !instanceName}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400"
+            className={`${styles.button} ${styles.buttonPrimary}`}
           >
             {loading ? '⏳ Criando...' : '✨ Criar Instância'}
           </button>
         </div>
-        <p className="text-sm text-gray-500 mt-2">
+        <p className={styles.inputHint}>
           💡 O webhook será configurado automaticamente após criação
         </p>
       </div>
 
+      {/* QR Code */}
       {qrCode && (
-        <div className="bg-white rounded-lg shadow-md p-6 text-center">
-          <h2 className="text-xl font-semibold mb-4">
+        <div className={`${styles.card} ${styles.qrSection}`}>
+          <h2 className={styles.qrTitle}>
             📱 Escaneie o QR Code com WhatsApp
           </h2>
           <img
             src={qrCode}
             alt="QR Code"
-            className="mx-auto border-4 border-blue-500 rounded-lg shadow-lg mb-4"
-            style={{ maxWidth: '400px' }}
+            className={styles.qrImage}
           />
-          <div className="bg-blue-50 p-4 rounded-lg text-left max-w-md mx-auto space-y-2">
-            <p className="text-sm"><strong>1.</strong> Abra o WhatsApp no celular 📱</p>
-            <p className="text-sm"><strong>2.</strong> Vá em Configurações → Aparelhos conectados ⚙️</p>
-            <p className="text-sm"><strong>3.</strong> Toque em "Conectar um aparelho" 🔌</p>
-            <p className="text-sm"><strong>4.</strong> Escaneie este QR Code 📷</p>
+          <div className={styles.qrInstructions}>
+            <p className={styles.qrStep}><strong>1.</strong> Abra o WhatsApp no celular 📱</p>
+            <p className={styles.qrStep}><strong>2.</strong> Vá em Configurações → Aparelhos conectados ⚙️</p>
+            <p className={styles.qrStep}><strong>3.</strong> Toque em "Conectar um aparelho" 🔌</p>
+            <p className={styles.qrStep}><strong>4.</strong> Escaneie este QR Code 📷</p>
           </div>
           <button
             onClick={() => setQrCode('')}
-            className="mt-4 px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
+            className={`${styles.button} ${styles.buttonSecondary}`}
           >
             Fechar QR Code
           </button>
         </div>
       )}
 
-      <div className="bg-white rounded-lg shadow-md p-6">
-        <h2 className="text-xl font-semibold mb-4">🔗 Links Úteis</h2>
-        <div className="space-y-2">
+      {/* Links Úteis */}
+      <div className={styles.card}>
+        <h2 className={styles.cardTitle}>🔗 Links Úteis</h2>
+        <div className={styles.linksSection}>
           <p>
             <strong>Evolution API Manager:</strong>{' '}
             <a 
               href="http://localhost:8080/manager" 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-blue-600 hover:underline"
+              className={styles.link}
             >
               http://localhost:8080/manager →
             </a>
           </p>
-          <p className="text-sm text-gray-600 mt-3">
-            ℹ️ <strong>Dicas:</strong>
-          </p>
-          <ul className="text-sm text-gray-600 list-disc list-inside space-y-1">
-            <li>Webhook é configurado automaticamente ao criar instâncias</li>
-            <li>Desconecte antes de deletar uma instância</li>
-            <li>Use o botão "Webhook" para reconfigurar manualmente se necessário</li>
-          </ul>
+          <div className={styles.linksList}>
+            <p><strong>ℹ️ Dicas:</strong></p>
+            <ul>
+              <li>Webhook é configurado automaticamente ao criar instâncias</li>
+              <li>Desconecte antes de deletar uma instância</li>
+              <li>Use o botão "Webhook" para reconfigurar manualmente se necessário</li>
+            </ul>
+          </div>
         </div>
       </div>
     </div>
