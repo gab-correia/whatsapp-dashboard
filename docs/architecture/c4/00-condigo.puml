@@ -1,107 +1,48 @@
-@startuml 00-overview
+@startuml WhatsApp Dashboard - C4 Model
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
-' Remover legenda padrão para este diagrama de índice
-' LAYOUT_WITH_LEGEND()
+LAYOUT_WITH_LEGEND()
 
-title Índice de Documentação C4 - WhatsApp Dashboard\nProjeto Django + React + Evolution API
+title WhatsApp Dashboard - Arquitetura C4
 
-' =====================================================================
-' 📋 Metadados do Projeto
-' =====================================================================
-note as metadata
-**Metadados do Projeto**
----
-**Versão:** 1.0
-**Data:** 07/10/2025
-**Equipe:** Projeto2 TechWeb
-**Stack:** Django REST + React + PostgreSQL + Celery
-end note
+' Definições de cores
+!define PRIMARY_COLOR #4A90E2
+!define SECONDARY_COLOR #50C878
+!define WARNING_COLOR #FFA500
+!define DANGER_COLOR #DC3545
 
-' =====================================================================
-' 📘 Estrutura da Documentação C4
-' =====================================================================
-note as structure
-**Estrutura da Documentação**
-====
-**Level 1 - Context Diagram**
-• 01-context-diagram.puml
-  Visão geral do sistema e suas interações externas
-  
-**Level 2 - Container Diagram**
-• 02-container-diagram.puml
-  Componentes tecnológicos e suas responsabilidades
-  
-**Level 3 - Component Diagrams**
-• 03-component-backend-diagram.puml
-  Estrutura interna do Backend Django
-• 03-component-frontend-diagram.puml
-  Estrutura interna do Frontend React
-  
-**Deployment Diagram**
-• 04-deployment-diagram.puml
-  Infraestrutura Docker e deploy
-  
-**Sequence Diagram**
-• 05-sequence-diagram.puml
-  Fluxo de integração com Evolution API
-end note
+Person(user, "Usuário", "Operador do sistema que gerencia mensagens WhatsApp")
+Person(customer, "Cliente WhatsApp", "Usuário final que envia mensagens via WhatsApp")
 
-' =====================================================================
-' 🛠️ Stack Tecnológico
-' =====================================================================
-note as tech_stack
-**Stack Tecnológico**
-====
-**Frontend**
-• React.js + Vite
-• Tailwind CSS
-• Axios/Fetch API
+System_Boundary(whatsapp_dashboard, "WhatsApp Dashboard") {
+    Container(frontend, "Frontend Web", "React, TypeScript, Vite", "Interface para gerenciar instâncias e visualizar mensagens")
+    Container(backend, "Backend API", "Django REST Framework", "API RESTful para gerenciamento de dados")
+    Container(celery_worker, "Celery Worker", "Python, Celery", "Processamento assíncrono de webhooks")
+    Container(celery_beat, "Celery Beat", "Python, Celery", "Agendamento de tarefas periódicas")
+    ContainerDb(postgres, "PostgreSQL", "PostgreSQL 15", "Armazena mensagens, contatos e logs")
+    ContainerDb(redis, "Redis", "Redis 7", "Broker de mensagens e cache")
+}
 
-**Backend**
-• Django REST Framework
-• Python 3.x
-• Celery (Workers Assíncronos)
+System_Ext(evolution_api, "Evolution API", "API não-oficial do WhatsApp Web (v2.1.1)")
+System_Ext(whatsapp, "WhatsApp", "Serviço de mensagens WhatsApp")
 
-**Infraestrutura**
-• PostgreSQL (Database)
-• Redis (Cache + Queue)
-• Nginx (Reverse Proxy)
-• Docker + Docker Compose
+' Relacionamentos Contexto
+Rel(user, frontend, "Acessa via navegador", "HTTPS")
+Rel(customer, whatsapp, "Envia mensagens", "Internet")
+Rel(whatsapp, evolution_api, "Conecta via", "WebSocket")
 
-**Integrações Externas**
-• Evolution API (WhatsApp)
-end note
+' Relacionamentos Sistema
+Rel(frontend, backend, "Faz requisições API", "REST/JSON")
+Rel(backend, postgres, "Lê/Escreve dados", "SQL")
+Rel(backend, redis, "Publica tarefas", "Redis Protocol")
+Rel(celery_worker, redis, "Consome tarefas", "Redis Protocol")
+Rel(celery_worker, postgres, "Salva mensagens", "SQL")
+Rel(celery_beat, redis, "Agenda tarefas", "Redis Protocol")
+Rel(backend, evolution_api, "Cria instâncias\nConfigura webhooks", "REST/JSON")
+Rel(evolution_api, backend, "Envia webhooks", "HTTP POST")
 
-' =====================================================================
-' 📝 Descrição do Sistema
-' =====================================================================
-note as description
-**Sobre o Sistema**
-====
-Sistema de monitoramento e análise de 
-mensagens WhatsApp integrado com Evolution API.
-
-**Funcionalidades Principais:**
-• Recepção de webhooks da Evolution API
-• Armazenamento de mensagens e contatos
-• Processamento assíncrono com Celery
-• Dashboard interativo com métricas
-• Visualização de conversas em tempo real
-
-**Arquitetura:**
-• Frontend SPA em React
-• Backend REST API em Django
-• Workers para tarefas em background
-• Banco de dados relacional PostgreSQL
-• Cache distribuído com Redis
-end note
-
-' =====================================================================
-' 📐 Layout Visual (Posicionamento)
-' =====================================================================
-metadata -[hidden]down-> structure
-structure -[hidden]down-> tech_stack
-tech_stack -[hidden]down-> description
-
+SHOW_LEGEND()
 @enduml
+

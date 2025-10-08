@@ -1,44 +1,27 @@
-@startuml 01-context-diagram
+@startuml WhatsApp Dashboard - Context Diagram
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
 
 LAYOUT_WITH_LEGEND()
 
-title System Context - WhatsApp Dashboard
+title Diagrama de Contexto - WhatsApp Dashboard
 
-' =====================================================================
-' Pessoas (Atores do Sistema)
-' =====================================================================
-Person(user, "Usuário Final", "Acessa o dashboard web para visualizar conversas e métricas do WhatsApp")
-Person(admin, "Administrador", "Gerencia configurações do sistema, usuários e integrações")
+Person(admin, "Administrador", "Gerencia instâncias WhatsApp e monitora mensagens")
+Person(operator, "Operador", "Visualiza mensagens e contatos")
+Person(customer, "Cliente", "Envia mensagens via WhatsApp")
 
-' =====================================================================
-' Sistema Principal (Foco do Diagrama)
-' =====================================================================
-System(whatsapp_dashboard, "WhatsApp Dashboard", "Sistema web que monitora, processa e exibe métricas e conversas do WhatsApp em tempo real")
+System(whatsapp_dashboard, "WhatsApp Dashboard", "Sistema de gerenciamento e monitoramento de mensagens WhatsApp com processamento em tempo real")
 
-' =====================================================================
-' Sistemas Externos
-' =====================================================================
-System_Ext(evolution_api, "Evolution API", "API de terceiros que fornece integração com WhatsApp Business, enviando webhooks e permitindo consultas de mensagens")
-System_Ext(whatsapp, "WhatsApp Business", "Plataforma de mensagens corporativa da Meta")
+System_Ext(evolution_api, "Evolution API", "API não-oficial do WhatsApp Web v2.1.1 para integração programática")
+System_Ext(whatsapp_service, "WhatsApp", "Serviço de mensagens instantâneas WhatsApp")
 
-' =====================================================================
-' Relacionamentos (Interações entre os elementos)
-' =====================================================================
-Rel(user, whatsapp_dashboard, "Visualiza conversas, métricas e dashboards", "HTTPS")
-Rel(admin, whatsapp_dashboard, "Configura integrações e gerencia usuários", "HTTPS")
+Rel(admin, whatsapp_dashboard, "Cria instâncias\nVisualiza dashboard\nGerencia conexões", "HTTPS/Web")
+Rel(operator, whatsapp_dashboard, "Visualiza mensagens\nFiltra contatos", "HTTPS/Web")
+Rel(customer, whatsapp_service, "Envia mensagens", "WhatsApp App")
 
-Rel(whatsapp_dashboard, evolution_api, "Recebe webhooks de mensagens e consulta dados", "HTTPS/REST API")
-Rel(evolution_api, whatsapp, "Conecta e sincroniza mensagens", "WhatsApp Protocol")
+Rel(whatsapp_service, evolution_api, "Conecta via WhatsApp Web", "WebSocket")
+Rel(evolution_api, whatsapp_dashboard, "Envia webhooks com mensagens", "HTTP POST")
+Rel(whatsapp_dashboard, evolution_api, "Cria instâncias\nObtém QR Code\nConfigura webhooks", "REST API")
 
-' =====================================================================
-' Notas explicativas (opcional)
-' =====================================================================
-note right of whatsapp_dashboard
-  **Sistema Principal**
-  Processa mensagens recebidas
-  via webhooks, armazena dados
-  e exibe em dashboard interativo
-end note
-
+SHOW_LEGEND()
 @enduml
+

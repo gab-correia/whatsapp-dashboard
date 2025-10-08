@@ -1,90 +1,53 @@
-# Documentação de Arquitetura C4
+# Documentação C4 - WhatsApp Dashboard
 
-Este diretório contém a documentação completa da arquitetura do sistema usando o modelo C4 (Context, Containers, Components, Code).
+Documentação da arquitetura do sistema usando o modelo C4 (Context, Containers, Components, Code).
 
-## 📋 Arquivos Disponíveis
+## 📐 Diagramas
 
-| Arquivo | Tipo | Descrição |
-|---------|------|-----------|
-| `Condigo.puml` | Overview | Visão geral da documentação |
-| `01-context-diagram.puml` | Level 1 | Contexto do sistema e usuários |
-| `02-container-diagram.puml` | Level 2 | Containers tecnológicos |
-| `03-component-backend-diagram.puml` | Level 3 | Componentes do Django |
-| `03-component-frontend-diagram.puml` | Level 3 | Componentes do React |
-| `04-deployment-diagram.puml` | Deployment | Arquitetura Docker |
-| `05-sequence-diagram.puml` | Sequence | Fluxo de integração |
+### 1. Contexto (Level 1)
+![Context Diagram](01-context-diagram.png)
 
-## 🏗️ Arquitetura do Sistema
+Mostra o sistema em alto nível e seus relacionamentos com usuários e sistemas externos.
 
-### Stack Tecnológico
-- **Frontend**: React.js 18 com componentes reutilizáveis
-- **Backend**: Django 4.2 + Django REST Framework
-- **Banco de Dados**: PostgreSQL 15
-- **Cache/Broker**: Redis 7
-- **Proxy**: Nginx 1.21
-- **Containerização**: Docker + Docker Compose
-- **Workers**: Celery para processamento assíncrono
-- **API Externa**: Evolution API
+### 2. Containers (Level 2)
+![Container Diagram](02-container-diagram.png)
 
-### Containers Docker
-1. **nginx-container**: Proxy reverso e servidor de arquivos estáticos
-2. **react-container**: Aplicação frontend React
-3. **django-container**: API backend Django
-4. **postgres-container**: Banco de dados PostgreSQL
-5. **redis-container**: Cache e message broker
-6. **celery-container**: Workers para tarefas assíncronas
+Detalha os principais containers (aplicações) que compõem o sistema:
+- Frontend React
+- Backend Django
+- Celery Workers
+- Bancos de dados
+- APIs externas
 
-## 🔍 Como Visualizar
+### 3. Componentes (Level 3)
 
-### Opção 1: VS Code + PlantUML Extension
-1. Instale a extensão "PlantUML" no VS Code
-2. Abra qualquer arquivo `.puml`
-3. Use `Ctrl+Shift+P` → "PlantUML: Preview Current Diagram"
+#### Backend Components
+![Backend Components](03-component-backend-diagram.png)
 
-### Opção 2: PlantUML Online
-1. Acesse: http://www.plantuml.com/plantuml/uml/
-2. Cole o conteúdo do arquivo `.puml`
-3. Visualize o diagrama gerado
+Componentes internos do backend Django:
+- API Views
+- Serializers
+- Models
+- Webhook Processor
+- Celery Tasks
 
-### Opção 3: PlantUML Local
-```bash
-# Instalar PlantUML (requer Java)
-sudo apt-get install plantuml
+#### Frontend Components
+![Frontend Components](03-component-frontend-diagram.png)
 
-# Gerar PNG
-plantuml -png arquivo.puml
+Componentes internos do frontend React:
+- Router
+- Pages
+- UI Components
+- Custom Hooks
+- API Services
 
-# Gerar SVG
-plantuml -tsvg arquivo.puml
-```
+### 4. Deployment
+![Deployment Diagram](04-deployment-diagram.png)
 
-## 📊 Níveis de Abstração
+Infraestrutura Docker Compose com todos os containers e volumes.
 
-### Level 1 - Contexto
-Mostra o sistema como uma "caixa preta" e suas interações com usuários e sistemas externos.
+### 5. Sequência
+![Sequence Diagram](05-sequence-diagram.png)
 
-### Level 2 - Container
-Decompõe o sistema em containers (aplicações, bancos de dados, etc.) mostrando as tecnologias.
+Fluxo completo desde criação de instância até recebimento de mensagem.
 
-### Level 3 - Componente
-Detalha os componentes internos de cada container, suas responsabilidades e interações.
-
-### Deployment
-Mostra como o sistema é implantado na infraestrutura, incluindo servidores e containers.
-
-## 🔄 Fluxos Principais
-
-1. **Autenticação**: Usuário → React → Django → PostgreSQL
-2. **Integração API**: Django → Evolution API → Cache Redis
-3. **Processamento Assíncrono**: Django → Celery → Redis → PostgreSQL
-4. **Servir Conteúdo**: Nginx → React (estáticos) + Django (API)
-
-## 🛠️ Próximos Passos
-
-Para implementar esta arquitetura:
-
-1. **Setup Docker**: Criar `docker-compose.yml`
-2. **Backend Django**: Configurar models, views, serializers
-3. **Frontend React**: Criar componentes e serviços
-4. **Integração**: Configurar comunicação com Evolution API
-5. **Deploy**: Configurar Nginx e orquestração de containers

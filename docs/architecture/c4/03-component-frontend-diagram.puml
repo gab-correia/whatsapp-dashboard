@@ -1,121 +1,34 @@
-@startuml 03-component-frontend
+@startuml WhatsApp Dashboard - Frontend Components
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
 
 LAYOUT_WITH_LEGEND()
 
-title Component Diagram - Frontend Web (React)
+title Diagrama de Componentes - Frontend React
 
-' =====================================================================
-' Elementos Externos ao Container
-' =====================================================================
-Person(user, "Usuário", "Usuário final do sistema")
-Container(backend_api, "Backend API", "Django REST Framework", "API REST do sistema")
-Container(nginx, "Nginx", "Web Server", "Servidor web")
+Person(user, "Usuário", "Administrador/Operador")
+Container(api, "Backend API", "Django", "API REST")
 
-' =====================================================================
-' Container em Foco com seus Componentes
-' =====================================================================
-Container_Boundary(frontend_app, "Frontend Web - React SPA") {
-    
-    ' --- Camada de Roteamento e Layout ---
-    Component(router, "Router", "React Router", "Gerencia navegação e rotas da aplicação")
-    Component(app_layout, "App Layout", "React Components", "Layout principal com header, sidebar e footer")
-    
-    ' --- Páginas Principais ---
-    Component(dashboard_page, "Dashboard Page", "React Component", "Página principal com cards de métricas e gráficos")
-    Component(messages_page, "Messages Page", "React Component", "Lista e visualiza conversas do WhatsApp")
-    Component(contacts_page, "Contacts Page", "React Component", "Gerencia contatos e clientes")
-    Component(settings_page, "Settings Page", "React Component", "Configurações do usuário e sistema")
-    Component(login_page, "Login Page", "React Component", "Página de autenticação")
-    
-    ' --- Componentes UI Reutilizáveis ---
-    Component(ui_components, "UI Components", "React + Tailwind CSS", "Botões, cards, tabelas, modais, formulários reutilizáveis")
-    Component(chart_components, "Chart Components", "Recharts/Chart.js", "Componentes de gráficos e visualizações")
-    
-    ' --- Gerenciamento de Estado ---
-    Component(auth_context, "Auth Context", "React Context API", "Gerencia estado de autenticação e usuário logado")
-    Component(app_context, "App Context", "React Context API", "Estado global: tema, notificações, configurações")
-    
-    ' --- Custom Hooks ---
-    Component(api_hooks, "API Hooks", "React Custom Hooks", "useFetch, useMessages, useContacts - lógica de chamadas API")
-    Component(auth_hooks, "Auth Hooks", "React Custom Hooks", "useAuth, useLogin, useLogout - lógica de autenticação")
-    Component(utility_hooks, "Utility Hooks", "React Custom Hooks", "useDebounce, useLocalStorage, useWebSocket")
-    
-    ' --- Camada de Comunicação ---
-    Component(api_client, "API Client", "Axios", "Cliente HTTP configurado com interceptors e tratamento de erros")
-    Component(websocket_client, "WebSocket Client", "WebSocket API", "Conexão real-time para atualização de mensagens")
+Container_Boundary(frontend, "Frontend - React") {
+    Component(router, "Router", "React Router 6", "Gerencia rotas e navegação")
+    Component(pages, "Pages", "React Components", "- Connection\n- Dashboard\n- Messages\n- Contacts")
+    Component(components, "UI Components", "React + Tailwind", "- StatCard\n- Layout\n- Navigation")
+    Component(hooks, "Custom Hooks", "React Hooks", "- useMessages\n- useContacts\n- useDashboard")
+    Component(services, "API Services", "Axios", "- api.ts\n- messagesService\n- contactsService")
+    Component(types, "TypeScript Types", "TypeScript", "Interfaces e tipos")
 }
 
-' =====================================================================
-' Relacionamentos - Usuário para Frontend
-' =====================================================================
-Rel(user, nginx, "Acessa aplicação", "HTTPS")
-Rel(nginx, router, "Serve SPA")
+' Usuário
+Rel(user, router, "Navega", "Browser")
 
-' =====================================================================
-' Relacionamentos - Roteamento
-' =====================================================================
-Rel(router, app_layout, "Renderiza layout")
-Rel(app_layout, dashboard_page, "Renderiza página")
-Rel(app_layout, messages_page, "Renderiza página")
-Rel(app_layout, contacts_page, "Renderiza página")
-Rel(app_layout, settings_page, "Renderiza página")
-Rel(router, login_page, "Renderiza (não autenticado)")
+' Componentes internos
+Rel(router, pages, "Renderiza páginas")
+Rel(pages, components, "Usa componentes UI")
+Rel(pages, hooks, "Consome dados")
+Rel(hooks, services, "Faz requisições")
+Rel(services, types, "Tipagem forte")
 
-' =====================================================================
-' Relacionamentos - Páginas para Componentes
-' =====================================================================
-Rel(dashboard_page, chart_components, "Exibe gráficos")
-Rel(dashboard_page, ui_components, "Usa componentes UI")
-Rel(messages_page, ui_components, "Usa tabelas e cards")
-Rel(contacts_page, ui_components, "Usa formulários e listas")
-Rel(settings_page, ui_components, "Usa formulários")
+' External
+Rel(services, api, "HTTP Requests", "JSON/HTTPS")
 
-' =====================================================================
-' Relacionamentos - Hooks e Contexto
-' =====================================================================
-Rel(dashboard_page, api_hooks, "Busca dados")
-Rel(messages_page, api_hooks, "Busca mensagens")
-Rel(contacts_page, api_hooks, "Busca/atualiza contatos")
-Rel(login_page, auth_hooks, "Executa login")
-
-Rel(app_layout, auth_context, "Consome estado auth")
-Rel(app_layout, app_context, "Consome estado global")
-Rel(auth_hooks, auth_context, "Atualiza estado")
-Rel(api_hooks, app_context, "Atualiza notificações")
-
-' =====================================================================
-' Relacionamentos - Comunicação com Backend
-' =====================================================================
-Rel(api_hooks, api_client, "Faz requisições HTTP")
-Rel(api_client, backend_api, "Consome API REST", "HTTPS/JSON")
-
-Rel(messages_page, websocket_client, "Conecta para real-time")
-Rel(websocket_client, backend_api, "WebSocket connection", "WSS")
-
-' =====================================================================
-' Relacionamentos - Utility Hooks
-' =====================================================================
-Rel(messages_page, utility_hooks, "Usa debounce em busca")
-Rel(auth_context, utility_hooks, "Persiste em localStorage")
-
-' =====================================================================
-' Notas Explicativas
-' =====================================================================
-note right of api_hooks
-  **Principais Hooks:**
-  • useMessages()
-  • useContacts()
-  • useMetrics()
-  • useDashboard()
-end note
-
-note bottom of ui_components
-  **Componentes Principais:**
-  • Button, Card, Modal
-  • Table, DataGrid
-  • Form, Input, Select
-  • Alert, Toast
-end note
-
+SHOW_LEGEND()
 @enduml

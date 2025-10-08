@@ -1,74 +1,42 @@
-@startuml 02-container-diagram
+@startuml WhatsApp Dashboard - Container Diagram
 !include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
 
 LAYOUT_WITH_LEGEND()
 
-title Container Diagram - WhatsApp Dashboard
+title Diagrama de Containers - WhatsApp Dashboard
 
-' =====================================================================
-' Pessoas (Atores do Sistema)
-' =====================================================================
-Person(user, "Usuário Final", "Acessa o dashboard para visualizar conversas e métricas")
-Person(admin, "Administrador", "Gerencia configurações e usuários do sistema")
+Person(user, "Usuário", "Administrador ou Operador do sistema")
 
-' =====================================================================
-' Sistema Principal com Containers
-' =====================================================================
-System_Boundary(whatsapp_dashboard, "WhatsApp Dashboard") {
-    Container(nginx, "Reverse Proxy", "Nginx", "Roteia requisições HTTP/HTTPS e serve arquivos estáticos do frontend")
+System_Boundary(system, "WhatsApp Dashboard") {
+    Container(web_app, "Web Application", "React 18, TypeScript, Vite 5", "Interface web responsiva para gerenciamento de instâncias WhatsApp")
+    Container(api, "API Application", "Django 5.1, Django REST Framework", "Fornece API RESTful para frontend e recebe webhooks")
+    Container(celery_worker, "Celery Worker", "Python 3.11, Celery 5", "Processa webhooks assincronamente e salva mensagens")
+    Container(celery_beat, "Celery Beat", "Python 3.11, Celery 5", "Agenda tarefas periódicas (limpeza, sync)")
     
-    Container(frontend, "Frontend Web", "React.js, Vite, Tailwind CSS", "Single Page Application que exibe dashboard interativo com conversas e métricas")
-    
-    Container(backend, "Backend API", "Django REST Framework, Python", "Processa webhooks, expõe API REST e implementa regras de negócio")
-    
-    Container(worker, "Async Worker", "Celery, Python", "Processa tarefas assíncronas em background (análise de mensagens, relatórios)")
-    
-    ContainerDb(database, "Database", "PostgreSQL", "Armazena mensagens, contatos, usuários, métricas e configurações")
-    
-    ContainerDb(cache, "Cache & Queue", "Redis", "Armazena cache de sessões e fila de tarefas do Celery")
+    ContainerDb(database, "Database", "PostgreSQL 15", "Armazena:\n- Mensagens\n- Contatos\n- Webhook Logs\n- Metadados")
+    ContainerDb(cache, "Message Broker", "Redis 7", "Broker para Celery\nCache de sessões")
 }
 
-' =====================================================================
-' Sistemas Externos
-' =====================================================================
-System_Ext(evolution_api, "Evolution API", "API externa que fornece integração com WhatsApp Business")
+System_Ext(evolution, "Evolution API", "API v2.1.1 WhatsApp")
+System_Ext(whatsapp, "WhatsApp Web", "Serviço WhatsApp")
 
-' =====================================================================
-' Relacionamentos - Usuários para Sistema
-' =====================================================================
-Rel(user, nginx, "Acessa dashboard via browser", "HTTPS:443")
-Rel(admin, nginx, "Acessa painel administrativo", "HTTPS:443")
+' Frontend
+Rel(user, web_app, "Usa", "HTTPS")
+Rel(web_app, api, "Faz chamadas API", "JSON/HTTPS")
 
-' =====================================================================
-' Relacionamentos - Internos do Sistema
-' =====================================================================
-Rel(nginx, frontend, "Serve arquivos estáticos", "HTTP:3000")
-Rel(nginx, backend, "Roteia requisições da API", "HTTP:8000")
+' Backend
+Rel(api, database, "Lê/Escreve", "SQL/TCP")
+Rel(api, cache, "Publica tarefas", "Redis Protocol")
+Rel(api, evolution, "Gerencia instâncias", "REST/HTTPS")
 
-Rel(frontend, backend, "Consome endpoints REST", "JSON/HTTPS")
+' Celery
+Rel(celery_worker, cache, "Consome tarefas", "Redis Protocol")
+Rel(celery_worker, database, "Salva mensagens", "SQL/TCP")
+Rel(celery_beat, cache, "Agenda tarefas", "Redis Protocol")
 
-Rel(backend, database, "Lê e escreve dados", "TCP:5432/SQL")
-Rel(backend, cache, "Armazena cache e enfileira tasks", "TCP:6379/Redis Protocol")
+' External
+Rel(evolution, api, "Envia webhooks", "HTTP POST")
+Rel(evolution, whatsapp, "Conecta via", "WebSocket")
 
-Rel(backend, worker, "Enfileira tarefas via Redis", "Redis Queue")
-Rel(worker, cache, "Consome tarefas da fila", "TCP:6379/Redis Protocol")
-Rel(worker, database, "Persiste resultados processados", "TCP:5432/SQL")
-
-' =====================================================================
-' Relacionamentos - Sistema para Externos
-' =====================================================================
-Rel(evolution_api, backend, "Envia webhooks de mensagens", "HTTPS/JSON Webhook")
-Rel(backend, evolution_api, "Consulta dados e status", "HTTPS/REST API")
-
-' =====================================================================
-' Notas Explicativas
-' =====================================================================
-note right of worker
-  **Tarefas Assíncronas:**
-  • Análise de sentimento
-  • Geração de relatórios
-  • Processamento de webhooks
-  • Sincronização de dados
-end note
-
+SHOW_LEGEND()
 @enduml
