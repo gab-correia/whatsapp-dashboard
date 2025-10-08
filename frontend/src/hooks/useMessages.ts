@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { messagesApi } from '@/services/api';
-import { Message } from '@/types';
+import type { Message } from '@/types';
 
 export function useMessages() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -11,7 +11,13 @@ export function useMessages() {
     try {
       setLoading(true);
       const data = await messagesApi.getAll();
-      setMessages(data.results || []);
+      
+      // A API retorna array direto, não objeto com results
+      if (Array.isArray(data)) {
+        setMessages(data);
+      } else {
+        setMessages([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Erro ao carregar mensagens');
     } finally {

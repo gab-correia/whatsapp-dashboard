@@ -27,7 +27,7 @@ SECRET_KEY = 'django-insecure-f(xjei6e9!^19(df5uttcktwue_9aa1=3_ve-$*e4w8gc)^#02
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS.extend(['backend', 'whatsapp-backend'])
 
 
 # Application definition
@@ -138,6 +138,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 
 # CORS Configuration
+CORS_ALLOW_ALL_ORIGINS = True  # Para desenvolvimento
+CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Frontend Vite
     "http://127.0.0.1:5173",

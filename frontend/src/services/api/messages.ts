@@ -1,9 +1,9 @@
 import api from './client';
-import { Message, ApiResponse } from '@/types';
+import type { Message } from '@/types';
 
 export const messagesApi = {
   getAll: async (params?: { page?: number; search?: string }) => {
-    const response = await api.get<ApiResponse<Message>>('/messages/', { params });
+    const response = await api.get<Message[]>('/messages/', { params });
     return response.data;
   },
 

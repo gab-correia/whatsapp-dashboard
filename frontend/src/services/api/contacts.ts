@@ -1,9 +1,9 @@
 import api from './client';
-import type { Contact, ApiResponse } from '@/types';
+import type { Contact } from '@/types';
 
 export const contactsApi = {
   getAll: async (params?: { page?: number; search?: string }) => {
-    const response = await api.get<ApiResponse<Contact>>('/contacts/', { params });
+    const response = await api.get<Contact[]>('/contacts/', { params });
     return response.data;
   },
 
